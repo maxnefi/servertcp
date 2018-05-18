@@ -1,0 +1,92 @@
+#include <arpa/inet.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <signal.h>
+#include <sys/stat.h>
+#include <sys/uio.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <sys/un.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#define SA struct sockaddr
+
+void str_cli(FILE *fp, int meusocket)
+{
+	char	msgenviada[4096], msgreceb[4096], user[500]; // dois chars
+	int i;
+	int p;
+	
+	printf("Escolha um nome de usuario: ");
+	
+	fgets(user, 500, stdin);
+
+	write(meusocket, user, strlen(user));
+
+	read(meusocket, msgreceb, 4096);
+	
+	while(strcmp(msgenviada, "xau") != 0 || strcmp(msgreceb, "xau") != 0)
+	{
+		
+
+		printf("Digite uma mensagem: ");
+		
+		fgets(msgenviada,4096,fp);
+    
+    	strcat(user, msgenviada);//depois faço isso
+  	
+   		for(i=0;i<strlen(user);i++)
+  		{
+   	 		if(user[i] == '\n') user[i] = '#';
+  		}
+		
+		write(meusocket, user, strlen(user));// Envia mensagem para servidor
+		
+		//printf("aguardando mensagem ...\n");
+	
+		read(meusocket, msgreceb, 4096); // Recebe mensagens do servidor
+
+		for(i=0;i<strlen(msgreceb);i++)
+  		{
+   	 		if(msgreceb[i] == '#') msgreceb[i] = '\n';
+  		}
+		printf(" %s\n", msgreceb);//printa mensagem recebida
+		//printf("Mensagem enviada: %s ", msgenviada);
+		
+	}
+}
+
+int main(int argc, char **argv)
+{
+	int meusocket;
+	struct sockaddr_in servaddr;
+	
+	if(argc != 2)//se você não digitar ip ele fecha
+	{
+		return 0;
+	}
+	
+	meusocket = socket(AF_INET, SOCK_STREAM, 0); // abre o socket
+
+	bzero(&servaddr, sizeof(servaddr));
+
+	servaddr.sin_family = AF_INET; // familia do socket
+
+	servaddr.sin_port = htons(9503); // porta do socket
+
+	inet_pton(AF_INET, argv[1], &servaddr.sin_addr); // 
+	
+	connect(meusocket, (SA *) &servaddr, sizeof(servaddr)); //conetcando cliente em determidado socket,
+															// usando o valore de retorno do socket, a suct do socket e o tamanho 
+															// da struct severaddr 
+	
+	str_cli(stdin, meusocket); //entra na função que envia e recebe mensagens
+
+	exit(0);
+}
